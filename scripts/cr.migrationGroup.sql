@@ -1,0 +1,5 @@
+CREATE TABLE "migrationGroup" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    desc VARCHAR(255) NOT NULL,
+    declared_date TIMESTAMP NOT NULL
+);
