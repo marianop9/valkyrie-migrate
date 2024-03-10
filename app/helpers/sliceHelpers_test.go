@@ -3,8 +3,8 @@ package helpers_test
 import (
 	"testing"
 
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/helpers"
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/repository"
+	"github.com/marianop9/valkyrie-migrate/app/helpers"
+	"github.com/marianop9/valkyrie-migrate/app/repository"
 )
 
 func nonEmptyStartWithA(s string) bool {

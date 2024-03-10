@@ -1,6 +1,6 @@
 package helpers
 
-import "github.com/marianop9/valkyrie-migrate/valkyrie-migrate/repository"
+import "github.com/marianop9/valkyrie-migrate/app/repository"
 
 func All[T any](slice []T, predicate func(T) bool) bool {
 	for i := 0; i < len(slice); i++ {

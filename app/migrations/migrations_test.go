@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/migrations"
+	"github.com/marianop9/valkyrie-migrate/app/migrations"
 )
 
 func getTestDirPath() string {

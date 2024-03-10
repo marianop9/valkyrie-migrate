@@ -7,17 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/repository"
+	"github.com/marianop9/valkyrie-migrate/app/repository"
 )
 
 const (
 	dateFmt = "20060102"
 )
-
-func Migrate(repo *repository.MigrationRepo) {
-
-
-}
 
 func GetMigrationGroups(dirEntries []os.DirEntry) ([]*repository.MigrationGroup, error) {
 	migrationGroups := make([]*repository.MigrationGroup, 0)
@@ -32,15 +27,13 @@ func GetMigrationGroups(dirEntries []os.DirEntry) ([]*repository.MigrationGroup,
 				return nil, errors.New("folder name doesn't match expected format")
 			}
 
-			date, err := time.Parse(dateFmt, entryParts[0]) // yyyymmdd
+			_, err := time.Parse(dateFmt, entryParts[0]) // yyyymmdd
 			if err != nil {
 				return nil, errors.New("folder date doesn't match expected format")
 			}
 
 			group := repository.MigrationGroup{
-				Name:       strings.Join(entryParts[1:], "_"),
-				FolderName: baseFolderName,
-				Date:       date,
+				Name:       baseFolderName,
 			}
 
 			migrationGroups = append(migrationGroups, &group)

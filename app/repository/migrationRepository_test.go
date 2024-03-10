@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/repository"
+	"github.com/marianop9/valkyrie-migrate/app/repository"
 	_ "github.com/mattn/go-sqlite3"
 )
 

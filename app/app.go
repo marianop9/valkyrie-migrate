@@ -1,4 +1,4 @@
-package valkyrieMigrate
+package app
 
 import (
 	"errors"
@@ -6,15 +6,19 @@ import (
 	"os"
 	"path"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/helpers"
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/migrations"
-	"github.com/marianop9/valkyrie-migrate/valkyrie-migrate/repository"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/marianop9/valkyrie-migrate/app/helpers"
+	"github.com/marianop9/valkyrie-migrate/app/migrations"
+	"github.com/marianop9/valkyrie-migrate/app/repository"
 )
 
 type MigrateApp struct {
-	repo repository.MigrationRepo
+	repo *repository.MigrationRepo
+}
+
+func NewMigrateApp(repo *repository.MigrationRepo) *MigrateApp {
+	return &MigrateApp{
+		repo,
+	}
 }
 
 func (app MigrateApp) Run(dsn string) error {
@@ -43,10 +47,7 @@ func (app MigrateApp) Run(dsn string) error {
 		return fmt.Errorf("no migrations found in folders %+v", folderNames)
 	}
 
-	// set up db
-	migrationDb := getDb(dsn)
-
-	if err := helpers.EnsureCreated(migrationDb); err != nil {
+	if err := app.repo.EnsureCreated(); err != nil {
 		fmt.Println("failed to create migration tables")
 		return err
 	}
@@ -77,16 +78,30 @@ func (app MigrateApp) Run(dsn string) error {
 		}
 	}
 
+	if len(migrationGroupsToApply) == 0 {
+		fmt.Println("database is up to date. Exiting...")
+		return nil
+	}
+
 	for i, newFolder := range migrationGroupsToApply {
 		// read dir to get the files
-		migrationFolderPath := path.Join(baseFolderName + newFolder.FolderName)
-		migrationFiles, _ := os.ReadDir(migrationFolderPath)
+		migrationFolderPath := path.Join(baseFolderName, newFolder.Name)
+		migrationFiles, err := os.ReadDir(migrationFolderPath)
 
+		if err != nil {
+			return fmt.Errorf("failed to read migration folder: %v", err)
+		}
+		
 		for _, migrationFile := range migrationFiles {
 			if fReader, err := os.Open(path.Join(migrationFolderPath, migrationFile.Name())); err != nil {
 				return errors.Join(fmt.Errorf("failed to read file %v", migrationFile.Name()), err)
 			} else {
-				migrationGroupsToApply[i].AddFile(fReader)
+				newMig := repository.Migration{
+					Name:      migrationFile.Name(),
+					GroupName: migrationGroupsToApply[i].Name,
+					FReader:   fReader,
+				}
+				migrationGroupsToApply[i].AddMigration(newMig)
 			}
 		}
 	}
@@ -96,15 +111,4 @@ func (app MigrateApp) Run(dsn string) error {
 	}
 
 	return nil
-}
-
-func getDb(dsn string) *sqlx.DB {
-	db, err := sqlx.Open("sqlite3", dsn)
-
-	if err != nil {
-		panic(fmt.Sprintf("Failed to connect to db: %v\n %s", dsn, err.Error()))
-	}
-
-	return db
-
 }
