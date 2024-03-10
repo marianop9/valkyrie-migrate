@@ -1,12 +1,13 @@
-package db
+package helpers
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
+
+	"github.com/jmoiron/sqlx"
 )
 
-func EnsureCreated(db *sql.DB) error {
+func EnsureCreated(db *sqlx.DB) error {
 	migrationTables := []string{
 		"migrationGroup",
 		"migration",
@@ -65,7 +66,7 @@ func sliceContains(slice []string, s string) bool {
 	return false
 }
 
-func createMigrationGroupTable(db *sql.DB) error {
+func createMigrationGroupTable(db *sqlx.DB) error {
 	fmt.Println("creating table 'migrationGroup'...")
 	
 	buf, err := os.ReadFile("scripts/cr.migrationGroup.sql")
@@ -81,7 +82,7 @@ func createMigrationGroupTable(db *sql.DB) error {
 	return nil
 }
 
-func createMigrationTable(db *sql.DB) error {
+func createMigrationTable(db *sqlx.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
 	buf, err := os.ReadFile("scripts/cr.migration.sql")
