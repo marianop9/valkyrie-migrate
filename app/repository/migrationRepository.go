@@ -47,7 +47,7 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error
 	for i := 0; i < len(migrations); i++ {
 		fmt.Printf("executing group %s:\n", migrations[i].Name)
 
-		if err := repo.applyMigration(tx, migrations[i]); err != nil {
+		if err := applyMigration(tx, migrations[i]); err != nil {
 			return fmt.Errorf("failed to execute group '%s', %v", migrations[i].Name, err)
 		}
 
@@ -65,7 +65,7 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error
 	return nil
 }
 
-func (repo *MigrationRepo) applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
+func applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
 	for _, mig := range migration.Migrations {
 		buf, err := io.ReadAll(mig.FReader)
 

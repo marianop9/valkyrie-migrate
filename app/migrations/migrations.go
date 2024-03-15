@@ -18,7 +18,7 @@ func GetMigrationGroups(dirEntries []os.DirEntry) ([]*repository.MigrationGroup,
 	migrationGroups := make([]*repository.MigrationGroup, 0)
 
 	for _, entry := range dirEntries {
-		fmt.Printf("%+v\n", entry.Name())
+		fmt.Printf("%s\n", entry.Name())
 		if entry.IsDir() {
 			baseFolderName := entry.Name()
 			entryParts := strings.Split(baseFolderName, "_")
@@ -33,7 +33,7 @@ func GetMigrationGroups(dirEntries []os.DirEntry) ([]*repository.MigrationGroup,
 			}
 
 			group := repository.MigrationGroup{
-				Name:       baseFolderName,
+				Name: baseFolderName,
 			}
 
 			migrationGroups = append(migrationGroups, &group)
