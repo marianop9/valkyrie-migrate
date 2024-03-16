@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/marianop9/valkyrie-migrate/app"
-	"github.com/marianop9/valkyrie-migrate/app/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/app"
+	"github.com/marianop9/valkyrie-migrate/internal/repository"
 	_ "github.com/mattn/go-sqlite3"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marianop9/valkyrie-migrate/app/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/repository"
 )
 
 const (

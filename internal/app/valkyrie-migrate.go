@@ -7,9 +7,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/marianop9/valkyrie-migrate/app/helpers"
-	"github.com/marianop9/valkyrie-migrate/app/migrations"
-	"github.com/marianop9/valkyrie-migrate/app/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/helpers"
+	"github.com/marianop9/valkyrie-migrate/internal/migrations"
+	"github.com/marianop9/valkyrie-migrate/internal/repository"
 )
 
 type MigrateApp struct {
