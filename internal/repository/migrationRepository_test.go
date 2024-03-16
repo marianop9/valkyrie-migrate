@@ -2,7 +2,6 @@ package repository_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -35,9 +34,4 @@ func getDb() *sqlx.DB {
 
 	return db
 
-}
-
-func TestXxx(t *testing.T) {
-	wd, _ := os.Getwd()
-	fmt.Println(wd)
 }

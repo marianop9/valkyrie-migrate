@@ -1,8 +1,5 @@
 build:
-	go build -o ./bin/migrate.exe ./cmd/valkyrie-migrate
-
-run: build
-	./bin/migrate.exe
+	go build -o ./bin/valkyrie.exe ./cmd/valkyrie
 
 test:
 	go test ./...

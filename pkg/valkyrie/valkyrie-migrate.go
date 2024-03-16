@@ -1,6 +1,7 @@
-package app
+package valkyrie
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -22,29 +23,23 @@ func NewMigrateApp(repo *repository.MigrationRepo) *MigrateApp {
 	}
 }
 
-func (app MigrateApp) Run(dsn string) error {
-	folderNames := []string{
-		"./migrations",
-		"../migrations",
+// Creates a new migration instance connected to the specified database
+func NewMigration(db *sql.DB, dbDriver string) *MigrateApp {
+	dbx := helpers.ConvertDb(db, dbDriver)
+	repo := repository.NewMigrationRepo(dbx)
+	return NewMigrateApp(repo)
+}
+
+func (app MigrateApp) Run(migrationFolder string) error {
+	// get migrations directory
+	dirEntries, err := os.ReadDir(migrationFolder)
+
+	if err != nil {
+		return err
 	}
-
-	var baseFolderName string
-
-	// get migrations folder
-	var dirEntries []os.DirEntry
-
-	for _, fname := range folderNames {
-		entries, err := os.ReadDir(fname)
-
-		if err == nil && len(entries) > 0 {
-			dirEntries = entries
-			baseFolderName = fname
-			break
-		}
-	}
-
+	
 	if len(dirEntries) == 0 {
-		return fmt.Errorf("no migrations found in folders %+v", folderNames)
+		return fmt.Errorf("no migrations found in folder: %+v", migrationFolder)
 	}
 	fmt.Println("found groups: ", len(dirEntries))
 
@@ -97,7 +92,7 @@ func (app MigrateApp) Run(dsn string) error {
 
 	for i, newFolder := range migrationGroupsToApply {
 		// read dir to get the files
-		migrationFolderPath := path.Join(baseFolderName, newFolder.Name)
+		migrationFolderPath := path.Join(migrationFolder, newFolder.Name)
 		migrationFiles, err := os.ReadDir(migrationFolderPath)
 
 		if err != nil {
@@ -135,7 +130,7 @@ func checkMigrationSubfolders(migrationFolderEntries []fs.DirEntry) error {
 	}
 
 	if helpers.Any[os.DirEntry](migrationFolderEntries, isNotDir) {
-		return fmt.Errorf("migrations folder may contain only subfolders representing migration groups.")
+		return fmt.Errorf("migrations folder may only contain subfolders representing migration groups")
 	}
 
 	return nil
