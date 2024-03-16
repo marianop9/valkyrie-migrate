@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -70,13 +69,12 @@ func sliceContains(slice []string, s string) bool {
 func createMigrationGroupTable(db *sqlx.DB) error {
 	fmt.Println("creating table 'migrationGroup'...")
 	
-	buf, err := os.ReadFile("scripts/cr.migrationGroup.sql")
+	cmd := `CREATE TABLE "migrationGroup" (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name VARCHAR(255) NOT NULL
+	)`
 
-	if err != nil {
-		return err
-	}
-
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
 		return sqlErr
 	}
 	
@@ -86,13 +84,14 @@ func createMigrationGroupTable(db *sqlx.DB) error {
 func createMigrationTable(db *sqlx.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
-	buf, err := os.ReadFile("scripts/cr.migration.sql")
-
-	if err != nil {
-		return err
-	}
-
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	cmd := `CREATE TABLE "migration" (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		migration_group_id INTEGER,
+		name VARCHAR(255) NOT NULL,
+		executed_at TIMESTAMP NOT NULL
+	)`
+	
+	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
 		return sqlErr
 	}
 	
