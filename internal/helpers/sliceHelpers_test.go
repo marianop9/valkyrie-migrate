@@ -136,7 +136,7 @@ func TestFindByName(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			result := helpers.FindByName(slice, tC.targetName)
+			result := helpers.FindMigrationGroup(slice, tC.targetName)
 
 			if (result == nil && !tC.expectedNil) || (result != nil && tC.expectedNil) {
 				t.Errorf("%s - expected nil: '%v', got '%v'", tC.desc, tC.expectedNil, result)

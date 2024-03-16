@@ -37,7 +37,33 @@ func (repo *MigrationRepo) GetMigrations() ([]MigrationGroup, error) {
 		return nil, err
 	}
 
+	for i := 0; i < len(migrationGroups); i++ {
+		group := migrationGroups[i]
+
+		migs, err := repo.getMigrationsByGroup(group.Id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read migrations from group '%s': %v", group.Name, err)
+		}
+		group.Migrations = migs
+	}
+
 	return migrationGroups, nil
+}
+
+func (repo *MigrationRepo) getMigrationsByGroup(groupId uint) ([]Migration, error) {
+	query := `SELECT m.name,
+		mg.name AS groupName
+	FROM migration m
+		JOIN migrationGroup mg on mg.id = m.migration_group_id
+	WHERE m.migration_group_id = ?`
+
+	migrations := []Migration{}
+
+	if err := repo.db.Select(&migrations, query, groupId); err != nil {
+		return nil, err
+	}
+
+	return migrations, nil
 }
 
 func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error {
@@ -99,7 +125,7 @@ func logMigration(tx *sql.Tx, group *MigrationGroup) error {
 	groupId, err := result.LastInsertId()
 	if err != nil {
 		return err
-	} 
+	}
 	group.Id = uint(groupId)
 
 	migrationCmd := `INSERT INTO migration (
@@ -116,7 +142,7 @@ func logMigration(tx *sql.Tx, group *MigrationGroup) error {
 			group.Id,
 			mig.Name,
 			logTime)
-		
+
 		if err != nil {
 			return err
 		}
@@ -125,13 +151,12 @@ func logMigration(tx *sql.Tx, group *MigrationGroup) error {
 	return nil
 }
 
-
 type MigrationGroup struct {
 	Id             uint
 	Name           string
 	Files          []io.Reader
 	Migrations     []Migration
-	MigrationCount uint `db:"migrationCount"`
+	MigrationCount int `db:"migrationCount"`
 }
 
 func (mg *MigrationGroup) AddFile(f io.Reader) {
@@ -156,6 +181,6 @@ func (mg *MigrationGroup) AddMigration(mig Migration) {
 
 type Migration struct {
 	Name      string
-	GroupName string
+	GroupName string `db:"groupName"`
 	FReader   io.Reader
 }

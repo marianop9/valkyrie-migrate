@@ -13,9 +13,9 @@ import (
 
 func NewMigrateCmd() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "migrate",
+		Use:   "migrate <migrationFolder> [dbName]",
 		Short: "updates the database to the latest migration",
-		Args:  cobra.MaximumNArgs(2),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.MaximumNArgs(2)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var (

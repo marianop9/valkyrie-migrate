@@ -20,7 +20,7 @@ func Any[T any](slice []T, predicate func(T) bool) bool {
 	return false
 }
 
-func FindByName(slice []repository.MigrationGroup, name string) *repository.MigrationGroup {
+func FindMigrationGroup(slice []repository.MigrationGroup, name string) *repository.MigrationGroup {
 	for i, mg := range slice {
 		if mg.Name == name {
 			return &slice[i]
@@ -29,3 +29,14 @@ func FindByName(slice []repository.MigrationGroup, name string) *repository.Migr
 
 	return nil
 }
+
+func FindMigration(migs []repository.Migration, name string) *repository.Migration {
+	for i, m := range migs {
+		if m.Name == name {
+			return &migs[i]
+		}
+	}
+
+	return nil
+}
+

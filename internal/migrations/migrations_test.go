@@ -64,14 +64,15 @@ func TestGetMigrations2(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			migrationEntries, err := os.ReadDir(path.Join(testDirBase, tC.testDir))
+			testDirPath := path.Join(testDirBase, tC.testDir)
+			migrationEntries, err := os.ReadDir(testDirPath)
 
 			if err != nil {
 				t.Errorf("failed to read test directory '%s': %v", tC.testDir, err)
 				return
 			}
 
-			migs, err := migrations.GetMigrationGroups(migrationEntries)
+			migs, err := migrations.GetMigrationGroups(testDirPath, migrationEntries)
 
 			if err != nil && !tC.expectedErr {
 				t.Errorf("unexpected error: %v", err)

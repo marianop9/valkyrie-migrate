@@ -37,7 +37,7 @@ func (app MigrateApp) Run(migrationFolder string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if len(dirEntries) == 0 {
 		return fmt.Errorf("no migrations found in folder: %+v", migrationFolder)
 	}
@@ -46,14 +46,14 @@ func (app MigrateApp) Run(migrationFolder string) error {
 	if err := checkMigrationSubfolders(dirEntries); err != nil {
 		return err
 	}
-	
+
 	if err := app.repo.EnsureCreated(); err != nil {
 		fmt.Println("failed to create migration tables")
 		return err
 	}
 
 	// retrieve migrations from folder
-	migrationGroups, err := migrations.GetMigrationGroups(dirEntries)
+	migrationGroups, err := migrations.GetMigrationGroups(migrationFolder, dirEntries)
 
 	if err != nil {
 		return err
@@ -72,9 +72,25 @@ func (app MigrateApp) Run(migrationFolder string) error {
 	// find differences
 	migrationGroupsToApply := make([]*repository.MigrationGroup, 0)
 	for _, migrationFolder := range migrationGroups {
-		if existingMigFolder := helpers.FindByName(existingMigrations, migrationFolder.Name); existingMigFolder == nil {
-			// new migration folder
+		if existingMigFolder := helpers.FindMigrationGroup(existingMigrations, migrationFolder.Name); existingMigFolder == nil {
+			// new migration group
 			migrationGroupsToApply = append(migrationGroupsToApply, migrationFolder)
+		} else if existingMigFolder.MigrationCount != migrationFolder.MigrationCount {
+			// migration group has new migrations to apply
+			migrationsToApply := make([]repository.Migration, 0)
+
+			for _, migrationFile := range migrationFolder.Migrations {
+				if existingMigFile := helpers.FindMigration(existingMigFolder.Migrations, migrationFile.Name); existingMigFile != nil {
+					migrationsToApply = append(migrationsToApply, migrationFile)
+				}
+			}
+
+			groupToApply := &repository.MigrationGroup{
+				Name:           migrationFolder.Name,
+				Migrations:     migrationsToApply,
+				MigrationCount: len(migrationsToApply),
+			}
+			migrationGroupsToApply = append(migrationGroupsToApply, groupToApply)
 		}
 	}
 
@@ -83,37 +99,25 @@ func (app MigrateApp) Run(migrationFolder string) error {
 		return nil
 	}
 
-
 	fmt.Println("Groups to execute:")
 	for _, group := range migrationGroupsToApply {
 		fmt.Printf("* %s\n", group.Name)
+		fmt.Printf("\t - migrations: %v\n", group.MigrationCount)
 	}
 	fmt.Printf("********\n\n")
 
-	for i, newFolder := range migrationGroupsToApply {
-		// read dir to get the files
-		migrationFolderPath := path.Join(migrationFolder, newFolder.Name)
-		migrationFiles, err := os.ReadDir(migrationFolderPath)
+	for _, groupToApply := range migrationGroupsToApply {
+		// get the handles for files we need to migrate
+		migrationFolderPath := path.Join(migrationFolder, groupToApply.Name)
 
-		if err != nil {
-			return fmt.Errorf("failed to read migration folder: %v", err)
-		}
-		
-		if err := checkFileExtension(migrationFiles, newFolder.Name); err != nil {
-			return err
-		}
-		
-		for _, migrationFile := range migrationFiles {			
-			if fReader, err := os.Open(path.Join(migrationFolderPath, migrationFile.Name())); err != nil {
-				return errors.Join(fmt.Errorf("failed to read file %v", migrationFile.Name()), err)
-			} else {
-				newMig := repository.Migration{
-					Name:      migrationFile.Name(),
-					GroupName: migrationGroupsToApply[i].Name,
-					FReader:   fReader,
-				}
-				migrationGroupsToApply[i].AddMigration(newMig)
+		for i := 0; i < len(groupToApply.Migrations); i++ {
+			migration := &groupToApply.Migrations[i]
+
+			fReader, err := os.Open(path.Join(migrationFolderPath, migration.Name))
+			if err != nil {
+				return errors.Join(fmt.Errorf("failed to read file %v", migration.Name), err)
 			}
+			migration.FReader = fReader
 		}
 	}
 
@@ -125,33 +129,13 @@ func (app MigrateApp) Run(migrationFolder string) error {
 }
 
 func checkMigrationSubfolders(migrationFolderEntries []fs.DirEntry) error {
-	isNotDir := func (dir os.DirEntry) bool {
+	isNotDir := func(dir os.DirEntry) bool {
 		return !dir.IsDir()
 	}
 
-	if helpers.Any[os.DirEntry](migrationFolderEntries, isNotDir) {
+	if helpers.Any(migrationFolderEntries, isNotDir) {
 		return fmt.Errorf("migrations folder may only contain subfolders representing migration groups")
 	}
 
-	return nil
-}
-
-func checkFileExtension(migrationGroupFiles []fs.DirEntry, folderName string) error {
-	isDir := func (entry os.DirEntry) bool {
-		return entry.IsDir()
-	}
-
-	if helpers.Any[fs.DirEntry](migrationGroupFiles, isDir) {
-		return fmt.Errorf("migration group folder may not contain nested subfolders. (%s)", folderName)
-	}
-
-	isNotSql := func (file os.DirEntry) bool {
-		return path.Ext(file.Name()) != ".sql"
-	}
-
-	if helpers.Any[fs.DirEntry](migrationGroupFiles, isNotSql) {
-		return fmt.Errorf("migration group folder may only contain sql files. (%s)", folderName)
-	}
-	
 	return nil
 }
