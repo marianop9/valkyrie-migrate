@@ -88,6 +88,13 @@ func (app MigrateApp) Run(dsn string) error {
 		return nil
 	}
 
+
+	fmt.Println("Groups to execute:")
+	for _, group := range migrationGroupsToApply {
+		fmt.Printf("* %s\n", group.Name)
+	}
+	fmt.Printf("********\n\n")
+
 	for i, newFolder := range migrationGroupsToApply {
 		// read dir to get the files
 		migrationFolderPath := path.Join(baseFolderName, newFolder.Name)
