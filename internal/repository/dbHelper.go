@@ -36,6 +36,7 @@ func EnsureCreated(db *sqlx.DB) error {
     }
 
 	if len(foundTables) == len(migrationTables) {
+		fmt.Println("migrations tables exist")
 		return nil
 	}
 
@@ -51,7 +52,7 @@ func EnsureCreated(db *sqlx.DB) error {
 		if err = createMigrationTable(db); err != nil {
 			return err
 		}
-	}	
+	}
 
 	return nil
 }
