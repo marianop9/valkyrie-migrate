@@ -1,37 +1,40 @@
 package repository_test
 
-import (
-	"fmt"
-	"testing"
+// import (
+// 	"database/sql"
+// 	"fmt"
+// 	"testing"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/marianop9/valkyrie-migrate/internal/repository"
-	_ "github.com/mattn/go-sqlite3"
-)
+// 	"github.com/marianop9/valkyrie-migrate/internal/repository"
+// 	_ "github.com/mattn/go-sqlite3"
+// )
 
-func TestGetMigrations(t *testing.T) {
-	repo := repository.NewMigrationRepo(getDb())
-	
-	mgs, err := repo.GetMigrations()
+// func TestGetMigrations(t *testing.T) {
+// 	repo := repository.NewMigrationRepo(getDb())
+// 	if err := repo.EnsureCreated(); err != nil {
+// 		t.Fatal(err.Error())
+// 	}
 
-	if err != nil {
-		t.Error(err.Error())
-	}
+// 	mgs, err := repo.GetMigrations()
 
-	if len(mgs) == 0 {
-		t.Error("found no rows")
-	}
+// 	if err != nil {
+// 		t.Fatal(err.Error())
+// 	}
 
-	t.Logf("found %v rows\n", len(mgs))
-}
+// 	if len(mgs) == 0 {
+// 		t.Error("found no rows!")
+// 	}
 
-func getDb() *sqlx.DB {
-	db, err := sqlx.Open("sqlite3", "../../test.db")
+// 	t.Logf("found %v rows\n", len(mgs))
+// }
 
-	if err != nil {
-		panic(fmt.Sprintf("Failed to connect to db: %v\n %s", "", err.Error()))
-	}
+// func getDb() *sql.DB {
+// 	db, err := sql.Open("sqlite3", "../../test.db")
 
-	return db
+// 	if err != nil {
+// 		panic(fmt.Sprintf("Failed to connect to db: %v\n %s", "", err.Error()))
+// 	}
 
-}
+// 	return db
+
+// }

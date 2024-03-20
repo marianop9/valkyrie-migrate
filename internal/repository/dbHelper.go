@@ -1,12 +1,12 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
-
-	"github.com/jmoiron/sqlx"
+	"os"
 )
 
-func EnsureCreated(db *sqlx.DB) error {
+func EnsureCreated(db *sql.DB) error {
 	migrationTables := []string{
 		"migrationGroup",
 		"migration",
@@ -66,32 +66,30 @@ func sliceContains(slice []string, s string) bool {
 	return false
 }
 
-func createMigrationGroupTable(db *sqlx.DB) error {
+func createMigrationGroupTable(db *sql.DB) error {
 	fmt.Println("creating table 'migrationGroup'...")
-	
-	cmd := `CREATE TABLE "migrationGroup" (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name VARCHAR(255) NOT NULL
-	)`
 
-	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
+	buf,err := os.ReadFile("./db/schema/cr_migrationGroup.sql")
+	if err != nil {
+		return err
+	}
+
+	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
 		return sqlErr
 	}
 	
 	return nil
 }
 
-func createMigrationTable(db *sqlx.DB) error {
+func createMigrationTable(db *sql.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
-	cmd := `CREATE TABLE "migration" (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		migration_group_id INTEGER,
-		name VARCHAR(255) NOT NULL,
-		executed_at TIMESTAMP NOT NULL
-	)`
+	buf,err := os.ReadFile("./db/schema/cr_migrationGroup.sql")
+	if err != nil {
+		return err
+	}
 	
-	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
+	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
 		return sqlErr
 	}
 	

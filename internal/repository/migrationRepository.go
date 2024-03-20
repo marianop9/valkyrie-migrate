@@ -1,21 +1,24 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	queries "github.com/marianop9/valkyrie-migrate/internal/repository/migrationQueries"
 )
 
 type MigrationRepo struct {
-	db *sqlx.DB
+	db      *sql.DB
+	queries *queries.Queries
 }
 
-func NewMigrationRepo(db *sqlx.DB) *MigrationRepo {
+func NewMigrationRepo(db *sql.DB) *MigrationRepo {
 	return &MigrationRepo{
-		db,
+		db:      db,
+		queries: queries.New(db),
 	}
 }
 
@@ -24,18 +27,12 @@ func (repo *MigrationRepo) EnsureCreated() error {
 }
 
 func (repo *MigrationRepo) GetMigrations() ([]MigrationGroup, error) {
-	query := `SELECT mg.id,
-		mg.name,
-		count(m.migration_group_id) AS migrationCount
-	FROM migrationGroup mg	
-		LEFT JOIN migration m on mg.id = m.migration_group_id
-	GROUP BY m.migration_group_id`
-
-	migrationGroups := []MigrationGroup{}
-
-	if err := repo.db.Select(&migrationGroups, query); err != nil {
+	queryRows, err := repo.queries.GetMigrations(context.TODO())
+	if err != nil {
 		return nil, err
 	}
+
+	migrationGroups := migGroupFromQueryList(queryRows)
 
 	for i := 0; i < len(migrationGroups); i++ {
 		group := migrationGroups[i]
@@ -51,25 +48,23 @@ func (repo *MigrationRepo) GetMigrations() ([]MigrationGroup, error) {
 }
 
 func (repo *MigrationRepo) getMigrationsByGroup(groupId uint) ([]Migration, error) {
-	query := `SELECT m.name,
-		mg.name AS groupName
-	FROM migration m
-		JOIN migrationGroup mg on mg.id = m.migration_group_id
-	WHERE m.migration_group_id = ?`
-
-	migrations := []Migration{}
-
-	if err := repo.db.Select(&migrations, query, groupId); err != nil {
+	queryResult, err := repo.queries.GetMigrationsByGroup(context.TODO(), int64(groupId))
+	if err != nil {
 		return nil, err
 	}
 
-	return migrations, nil
+	return migFromQueryList(queryResult), nil
 }
 
 func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error {
-	tx, _ := repo.db.Begin()
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
 
+	txQuery := repo.queries.WithTx(tx)
+	
 	for i := 0; i < len(migrations); i++ {
 		fmt.Printf("executing group %s:\n", migrations[i].Name)
 
@@ -77,18 +72,14 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error
 			return fmt.Errorf("failed to execute group '%s', %v", migrations[i].Name, err)
 		}
 
-		if err := logMigration(tx, migrations[i]); err != nil {
+		if err := logMigration(txQuery, migrations[i]); err != nil {
 			return fmt.Errorf("failed to log group '%s', %v", migrations[i].Name, err)
 		}
 
 		fmt.Printf("done executing group %s:\n", migrations[i].Name)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
@@ -109,41 +100,27 @@ func applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
 	return nil
 }
 
-func logMigration(tx *sql.Tx, group *MigrationGroup) error {
-	groupCmd := `INSERT INTO migrationGroup (
-		name
-	) VALUES (
-		$1
-	)
-	RETURNING id`
-
-	result, err := tx.Exec(groupCmd, group.Name)
+func logMigration(tx *queries.Queries, group *MigrationGroup) error {
+	result, err := tx.LogMigrationGroup(context.TODO(), group.Name)
 	if err != nil {
 		return err
 	}
 
-	groupId, err := result.LastInsertId()
-	if err != nil {
+	if groupId, err := result.LastInsertId(); err != nil {
 		return err
+	} else {
+		group.Id = uint(groupId)
 	}
-	group.Id = uint(groupId)
-
-	migrationCmd := `INSERT INTO migration (
-		migration_group_id,
-		name,
-		executed_at
-	) VALUES (
-		$1, $2, $3
-	)`
 
 	logTime := time.Now()
 	for _, mig := range group.Migrations {
-		_, err := tx.Exec(migrationCmd,
-			group.Id,
-			mig.Name,
-			logTime)
+		migrationParams := queries.LogMigrationParams{
+			GroupId: int64(group.Id),
+			Name: mig.Name,
+			ExecutedAt: logTime,
+		}
 
-		if err != nil {
+		if err := tx.LogMigration(context.TODO(), migrationParams); err != nil {
 			return err
 		}
 	}
@@ -183,4 +160,39 @@ type Migration struct {
 	Name      string
 	GroupName string `db:"groupName"`
 	FReader   io.Reader
+}
+
+func migGroupFromQuery(queryRow *queries.GetMigrationsRow) MigrationGroup {
+	return MigrationGroup{
+		Id:             uint(queryRow.ID),
+		Name:           queryRow.Name,
+		MigrationCount: int(queryRow.Migrationcount),
+	}
+}
+
+func migGroupFromQueryList(queryResult []queries.GetMigrationsRow) []MigrationGroup {
+	list := make([]MigrationGroup, len(queryResult))
+
+	for i := 0; i < len(queryResult); i++ {
+		list[i] = migGroupFromQuery(&queryResult[i])
+	}
+
+	return list
+}
+
+func migFromQuery(row *queries.GetMigrationsByGroupRow) Migration {
+	return Migration{
+		Name:      row.Name,
+		GroupName: row.Groupname,
+	}
+}
+
+func migFromQueryList(queryResult []queries.GetMigrationsByGroupRow) []Migration {
+	list := make([]Migration, len(queryResult))
+
+	for i := 0; i < len(queryResult); i++ {
+		list[i] = migFromQuery(&queryResult[i])
+	}
+
+	return list
 }

@@ -25,8 +25,7 @@ func NewMigrateApp(repo *repository.MigrationRepo) *MigrateApp {
 
 // Creates a new migration instance connected to the specified database
 func NewMigration(db *sql.DB, dbDriver string) *MigrateApp {
-	dbx := helpers.ConvertDb(db, dbDriver)
-	repo := repository.NewMigrationRepo(dbx)
+	repo := repository.NewMigrationRepo(db)
 	return NewMigrateApp(repo)
 }
 
