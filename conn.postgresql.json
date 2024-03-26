@@ -1,0 +1,3 @@
+{
+    "ConnectionString": "postgresql://postgres:pwd@localhost:5431"
+}

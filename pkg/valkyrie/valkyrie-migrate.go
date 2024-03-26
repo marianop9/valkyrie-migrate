@@ -10,14 +10,16 @@ import (
 
 	"github.com/marianop9/valkyrie-migrate/internal/helpers"
 	"github.com/marianop9/valkyrie-migrate/internal/migrations"
-	"github.com/marianop9/valkyrie-migrate/internal/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/models"
+	sqliteRepo "github.com/marianop9/valkyrie-migrate/internal/repository/sqlite"
 )
 
 type MigrateApp struct {
-	repo *repository.MigrationRepo
+//	repo *sqliteRepo.SqliteRepo
+	repo models.MigrationStorer
 }
 
-func NewMigrateApp(repo *repository.MigrationRepo) *MigrateApp {
+func NewMigrateApp(repo models.MigrationStorer) *MigrateApp {
 	return &MigrateApp{
 		repo,
 	}
@@ -25,7 +27,7 @@ func NewMigrateApp(repo *repository.MigrationRepo) *MigrateApp {
 
 // Creates a new migration instance connected to the specified database
 func NewMigration(db *sql.DB, dbDriver string) *MigrateApp {
-	repo := repository.NewMigrationRepo(db)
+	repo := sqliteRepo.NewMigrationRepo(db)
 	return NewMigrateApp(repo)
 }
 
@@ -69,14 +71,14 @@ func (app MigrateApp) Run(migrationFolder string) error {
 	}
 
 	// find differences
-	migrationGroupsToApply := make([]*repository.MigrationGroup, 0)
+	migrationGroupsToApply := make([]*models.MigrationGroup, 0)
 	for _, migrationFolder := range migrationGroups {
 		if existingMigFolder := helpers.FindMigrationGroup(existingMigrations, migrationFolder.Name); existingMigFolder == nil {
 			// new migration group
 			migrationGroupsToApply = append(migrationGroupsToApply, migrationFolder)
 		} else if existingMigFolder.MigrationCount != migrationFolder.MigrationCount {
 			// migration group has new migrations to apply
-			migrationsToApply := make([]repository.Migration, 0)
+			migrationsToApply := make([]models.Migration, 0)
 
 			for _, migrationFile := range migrationFolder.Migrations {
 				if existingMigFile := helpers.FindMigration(existingMigFolder.Migrations, migrationFile.Name); existingMigFile != nil {
@@ -84,7 +86,7 @@ func (app MigrateApp) Run(migrationFolder string) error {
 				}
 			}
 
-			groupToApply := &repository.MigrationGroup{
+			groupToApply := &models.MigrationGroup{
 				Name:           migrationFolder.Name,
 				Migrations:     migrationsToApply,
 				MigrationCount: len(migrationsToApply),

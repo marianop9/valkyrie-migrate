@@ -14,16 +14,16 @@ import (
 const getMigrations = `-- name: GetMigrations :many
 SELECT mg.id,
     mg.name,
-    count(m.migration_group_id) AS migrationCount
-FROM migrationGroup mg	
+    count(m.migration_group_id) "migrationCount"
+FROM migration_group mg	
     LEFT JOIN migration m on mg.id = m.migration_group_id
-GROUP BY m.migration_group_id
+GROUP BY mg.id, mg.name
 `
 
 type GetMigrationsRow struct {
-	ID             int64
+	ID             int32
 	Name           string
-	Migrationcount int64
+	MigrationCount int64
 }
 
 func (q *Queries) GetMigrations(ctx context.Context) ([]GetMigrationsRow, error) {
@@ -35,7 +35,7 @@ func (q *Queries) GetMigrations(ctx context.Context) ([]GetMigrationsRow, error)
 	var items []GetMigrationsRow
 	for rows.Next() {
 		var i GetMigrationsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Migrationcount); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.MigrationCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -53,8 +53,8 @@ const getMigrationsByGroup = `-- name: GetMigrationsByGroup :many
 SELECT m.name,
     mg.name AS groupName
 FROM migration m
-    JOIN migrationGroup mg on mg.id = m.migration_group_id
-WHERE m.migration_group_id = ?1
+    JOIN migration_group mg on mg.id = m.migration_group_id
+WHERE m.migration_group_id = $1
 `
 
 type GetMigrationsByGroupRow struct {
@@ -62,7 +62,7 @@ type GetMigrationsByGroupRow struct {
 	Groupname string
 }
 
-func (q *Queries) GetMigrationsByGroup(ctx context.Context, id int64) ([]GetMigrationsByGroupRow, error) {
+func (q *Queries) GetMigrationsByGroup(ctx context.Context, id int32) ([]GetMigrationsByGroupRow, error) {
 	rows, err := q.db.QueryContext(ctx, getMigrationsByGroup, id)
 	if err != nil {
 		return nil, err
@@ -90,27 +90,25 @@ INSERT INTO migration (
     migration_group_id,
     name,
     executed_at
-) VALUES (
-    ?1, ?2, ?3
-)
+) VALUES ($1, $2, $3)
 `
 
 type LogMigrationParams struct {
-	GroupId    int64
-	Name       string
-	ExecutedAt time.Time
+	MigrationGroupID int32
+	Name             string
+	ExecutedAt       time.Time
 }
 
 func (q *Queries) LogMigration(ctx context.Context, arg LogMigrationParams) error {
-	_, err := q.db.ExecContext(ctx, logMigration, arg.GroupId, arg.Name, arg.ExecutedAt)
+	_, err := q.db.ExecContext(ctx, logMigration, arg.MigrationGroupID, arg.Name, arg.ExecutedAt)
 	return err
 }
 
 const logMigrationGroup = `-- name: LogMigrationGroup :execresult
-INSERT INTO migrationGroup (
+INSERT INTO migration_group (
     name
 ) VALUES (
-    ?1
+    $1
 )
 RETURNING id
 `

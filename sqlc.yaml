@@ -1,9 +1,17 @@
 version: "2"
 sql:
-- schema: "db/schema"
-  queries: "db/queries"
+- schema: "db/schema/sqlite"
+  queries: "db/queries/sqlite"
   engine: "sqlite"
   gen:
     go: 
-      out: "internal/repository/migrationQueries"
+      out: "internal/repository/queries/sqlite"
+      package: "queries"
+
+- schema: "db/schema/postgresql"
+  queries: "db/queries/postgresql"
+  engine: "postgresql"
+  gen:
+    go: 
+      out: "internal/repository/queries/postgresql"
       package: "queries"

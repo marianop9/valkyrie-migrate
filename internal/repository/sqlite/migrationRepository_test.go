@@ -1,4 +1,4 @@
-package repository_test
+package sqliteRepo_test
 
 // import (
 // 	"database/sql"

@@ -8,7 +8,7 @@ import (
 
 func EnsureCreated(db *sql.DB) error {
 	migrationTables := []string{
-		"migrationGroup",
+		"migration_group",
 		"migration",
 	}
 
@@ -39,7 +39,7 @@ func EnsureCreated(db *sql.DB) error {
 		return nil
 	}
 
-	// create migrationGroup table
+	// create migration_group table
 	if !sliceContains(foundTables, migrationTables[0]) {
 		if err = createMigrationGroupTable(db); err != nil {
 			return err
@@ -67,9 +67,9 @@ func sliceContains(slice []string, s string) bool {
 }
 
 func createMigrationGroupTable(db *sql.DB) error {
-	fmt.Println("creating table 'migrationGroup'...")
+	fmt.Println("creating table 'migration_group'...")
 
-	buf,err := os.ReadFile("./db/schema/cr_migrationGroup.sql")
+	buf,err := os.ReadFile("./db/schema/sqlite/cr_migrationGroup.sql")
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func createMigrationGroupTable(db *sql.DB) error {
 func createMigrationTable(db *sql.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
-	buf,err := os.ReadFile("./db/schema/cr_migrationGroup.sql")
+	buf,err := os.ReadFile("./db/schema/sqlite/cr_migration.sql")
 	if err != nil {
 		return err
 	}

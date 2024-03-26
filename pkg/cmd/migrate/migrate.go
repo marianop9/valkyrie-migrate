@@ -3,10 +3,13 @@ package migrate
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/marianop9/valkyrie-migrate/internal/constants"
 	"github.com/marianop9/valkyrie-migrate/internal/helpers"
-	"github.com/marianop9/valkyrie-migrate/internal/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/models"
+	postgresRepo "github.com/marianop9/valkyrie-migrate/internal/repository/postgres"
+	sqliteRepo "github.com/marianop9/valkyrie-migrate/internal/repository/sqlite"
 	"github.com/marianop9/valkyrie-migrate/pkg/valkyrie"
 	"github.com/spf13/cobra"
 )
@@ -28,16 +31,24 @@ func NewMigrateCmd() *cobra.Command {
 				migrationFolder, dbName = args[0], constants.DefaultDb
 			}
 
-			if path.Ext(dbName) != ".db" {
+			var migrationRepo models.MigrationStorer
+
+			if strings.HasPrefix(dbName, "postgresql://") {
+				db, err := helpers.GetPostgresDb(dbName)
+				if err != nil {
+					return err
+				}
+				migrationRepo = postgresRepo.NewMigrationRepo(db)
+
+			} else if path.Ext(dbName) == ".db" {
+				db, err := helpers.GetDb(dbName)
+				if err != nil {
+					return err
+				}
+				migrationRepo = sqliteRepo.NewMigrationRepo(db)
+			} else {
 				return fmt.Errorf("invalid database file extension")
 			}
-			
-			db, err := helpers.GetDb(dbName)
-			if err != nil {
-				return err
-			}
-
-			migrationRepo := repository.NewMigrationRepo(db)
 
 			return valkyrie.NewMigrateApp(migrationRepo).Run(migrationFolder)
 		},

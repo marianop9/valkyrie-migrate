@@ -1,6 +1,6 @@
 package helpers
 
-import "github.com/marianop9/valkyrie-migrate/internal/repository"
+import "github.com/marianop9/valkyrie-migrate/internal/models"
 
 func All[T any](slice []T, predicate func(T) bool) bool {
 	for i := 0; i < len(slice); i++ {
@@ -20,7 +20,7 @@ func Any[T any](slice []T, predicate func(T) bool) bool {
 	return false
 }
 
-func FindMigrationGroup(slice []repository.MigrationGroup, name string) *repository.MigrationGroup {
+func FindMigrationGroup(slice []models.MigrationGroup, name string) *models.MigrationGroup {
 	for i, mg := range slice {
 		if mg.Name == name {
 			return &slice[i]
@@ -30,7 +30,7 @@ func FindMigrationGroup(slice []repository.MigrationGroup, name string) *reposit
 	return nil
 }
 
-func FindMigration(migs []repository.Migration, name string) *repository.Migration {
+func FindMigration(migs []models.Migration, name string) *models.Migration {
 	for i, m := range migs {
 		if m.Name == name {
 			return &migs[i]

@@ -1,4 +1,4 @@
-package repository
+package sqliteRepo
 
 import (
 	"context"
@@ -7,26 +7,28 @@ import (
 	"io"
 	"time"
 
-	queries "github.com/marianop9/valkyrie-migrate/internal/repository/migrationQueries"
+	"github.com/marianop9/valkyrie-migrate/internal/models"
+	"github.com/marianop9/valkyrie-migrate/internal/repository"
+	queries "github.com/marianop9/valkyrie-migrate/internal/repository/queries/sqlite"
 )
 
-type MigrationRepo struct {
+type SqliteRepo struct {
 	db      *sql.DB
 	queries *queries.Queries
 }
 
-func NewMigrationRepo(db *sql.DB) *MigrationRepo {
-	return &MigrationRepo{
+func NewMigrationRepo(db *sql.DB) *SqliteRepo {
+	return &SqliteRepo{
 		db:      db,
 		queries: queries.New(db),
 	}
 }
 
-func (repo *MigrationRepo) EnsureCreated() error {
-	return EnsureCreated(repo.db)
+func (repo *SqliteRepo) EnsureCreated() error {
+	return repository.EnsureCreated(repo.db)
 }
 
-func (repo *MigrationRepo) GetMigrations() ([]MigrationGroup, error) {
+func (repo *SqliteRepo) GetMigrations() ([]models.MigrationGroup, error) {
 	queryRows, err := repo.queries.GetMigrations(context.TODO())
 	if err != nil {
 		return nil, err
@@ -47,7 +49,7 @@ func (repo *MigrationRepo) GetMigrations() ([]MigrationGroup, error) {
 	return migrationGroups, nil
 }
 
-func (repo *MigrationRepo) getMigrationsByGroup(groupId uint) ([]Migration, error) {
+func (repo *SqliteRepo) getMigrationsByGroup(groupId uint) ([]models.Migration, error) {
 	queryResult, err := repo.queries.GetMigrationsByGroup(context.TODO(), int64(groupId))
 	if err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (repo *MigrationRepo) getMigrationsByGroup(groupId uint) ([]Migration, erro
 	return migFromQueryList(queryResult), nil
 }
 
-func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error {
+func (repo *SqliteRepo) ExecuteMigrations(migrations []*models.MigrationGroup) error {
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return err
@@ -82,7 +84,7 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*MigrationGroup) error
 	return tx.Commit()
 }
 
-func applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
+func applyMigration(tx *sql.Tx, migration *models.MigrationGroup) error {
 	for _, mig := range migration.Migrations {
 		buf, err := io.ReadAll(mig.FReader)
 
@@ -100,7 +102,7 @@ func applyMigration(tx *sql.Tx, migration *MigrationGroup) error {
 	return nil
 }
 
-func logMigration(tx *queries.Queries, group *MigrationGroup) error {
+func logMigration(tx *queries.Queries, group *models.MigrationGroup) error {
 	result, err := tx.LogMigrationGroup(context.TODO(), group.Name)
 	if err != nil {
 		return err
@@ -128,50 +130,16 @@ func logMigration(tx *queries.Queries, group *MigrationGroup) error {
 	return nil
 }
 
-type MigrationGroup struct {
-	Id             uint
-	Name           string
-	Files          []io.Reader
-	Migrations     []Migration
-	MigrationCount int `db:"migrationCount"`
-}
-
-func (mg *MigrationGroup) AddFile(f io.Reader) {
-	if mg.Files == nil {
-		mg.Files = []io.Reader{
-			f,
-		}
-	} else {
-		mg.Files = append(mg.Files, f)
-	}
-}
-
-func (mg *MigrationGroup) AddMigration(mig Migration) {
-	if mg.Migrations == nil {
-		mg.Migrations = []Migration{
-			mig,
-		}
-	} else {
-		mg.Migrations = append(mg.Migrations, mig)
-	}
-}
-
-type Migration struct {
-	Name      string
-	GroupName string `db:"groupName"`
-	FReader   io.Reader
-}
-
-func migGroupFromQuery(queryRow *queries.GetMigrationsRow) MigrationGroup {
-	return MigrationGroup{
+func migGroupFromQuery(queryRow *queries.GetMigrationsRow) models.MigrationGroup {
+	return models.MigrationGroup{
 		Id:             uint(queryRow.ID),
 		Name:           queryRow.Name,
 		MigrationCount: int(queryRow.Migrationcount),
 	}
 }
 
-func migGroupFromQueryList(queryResult []queries.GetMigrationsRow) []MigrationGroup {
-	list := make([]MigrationGroup, len(queryResult))
+func migGroupFromQueryList(queryResult []queries.GetMigrationsRow) []models.MigrationGroup {
+	list := make([]models.MigrationGroup, len(queryResult))
 
 	for i := 0; i < len(queryResult); i++ {
 		list[i] = migGroupFromQuery(&queryResult[i])
@@ -180,15 +148,15 @@ func migGroupFromQueryList(queryResult []queries.GetMigrationsRow) []MigrationGr
 	return list
 }
 
-func migFromQuery(row *queries.GetMigrationsByGroupRow) Migration {
-	return Migration{
+func migFromQuery(row *queries.GetMigrationsByGroupRow) models.Migration {
+	return models.Migration{
 		Name:      row.Name,
 		GroupName: row.Groupname,
 	}
 }
 
-func migFromQueryList(queryResult []queries.GetMigrationsByGroupRow) []Migration {
-	list := make([]Migration, len(queryResult))
+func migFromQueryList(queryResult []queries.GetMigrationsByGroupRow) []models.Migration {
+	list := make([]models.Migration, len(queryResult))
 
 	for i := 0; i < len(queryResult); i++ {
 		list[i] = migFromQuery(&queryResult[i])

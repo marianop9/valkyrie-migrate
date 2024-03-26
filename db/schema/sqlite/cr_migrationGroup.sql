@@ -1,4 +1,4 @@
-CREATE TABLE migrationGroup (
+CREATE TABLE migration_group (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255) NOT NULL
 );

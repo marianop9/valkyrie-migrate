@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/marianop9/valkyrie-migrate/internal/helpers"
-	"github.com/marianop9/valkyrie-migrate/internal/repository"
+	"github.com/marianop9/valkyrie-migrate/internal/models"
 )
 
 func nonEmptyStartWithA(s string) bool {
@@ -106,7 +106,7 @@ func TestAny(t *testing.T) {
 }
 
 func TestFindByName(t *testing.T) {
-	slice := []repository.MigrationGroup {
+	slice := []models.MigrationGroup {
 		{
 			Name: "name123",
 		},
