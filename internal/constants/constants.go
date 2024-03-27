@@ -1,3 +1,4 @@
 package constants
 
-var DefaultDb string = "valkyrie.db"
+const DefaultDb = "valkyrie.db"
+const ConnFlagName = "conn"

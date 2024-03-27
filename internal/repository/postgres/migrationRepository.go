@@ -33,72 +33,58 @@ func (repo *MigrationRepo) EnsureCreated() error {
 		"migration",
 	}
 
-	query := `SELECT table_name
+	query := `SELECT count(1)
 		FROM information_schema.tables 
 		WHERE table_schema = 'public'
 			AND table_name IN ($1, $2);`
 
-	rows, err := repo.db.Query(query, migrationTables[0], migrationTables[1])
+	var tableCount int
+	err := repo.db.QueryRow(query, migrationTables[0], migrationTables[1]).Scan(&tableCount)
 	if err != nil {
 		return err
 	}
 
-	defer rows.Close()
-
-	foundTables := make([]string, 0)
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return err
-		}
-
-		foundTables = append(foundTables, name)
-	}
-
-	if len(foundTables) == len(migrationTables) {
+	if tableCount == len(migrationTables) {
 		fmt.Println("migrations tables exist")
 		return nil
-	} else if len(foundTables) != 0 {
+	} else if tableCount != 0 {
 		return ErrInconsistenMigrationSchema
 	}
 
-	// create migration_group table
-	if err = createMigrationGroupTable(repo.db); err != nil {
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// create migration schema
+	if err = createMigrationTables(tx); err != nil {
 		return err
 	}
 
-	// create migration table
-	if err = createMigrationTable(repo.db); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
-func createMigrationGroupTable(db *sql.DB) error {
+func createMigrationTables(tx *sql.Tx) error {
 	fmt.Println("creating table 'migration_group'...")
 
-	buf, err := os.ReadFile("./db/schema/postgresql/cr_migrationGroup.sql")
+	migGroupBuf, err := os.ReadFile("./db/schema/postgresql/cr_migrationGroup.sql")
 	if err != nil {
 		return err
 	}
 
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	if _, sqlErr := tx.Exec(string(migGroupBuf)); sqlErr != nil {
 		return sqlErr
 	}
 
-	return nil
-}
-
-func createMigrationTable(db *sql.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
-	buf, err := os.ReadFile("./db/schema/postgresql/cr_migration.sql")
+	migrationBuf, err := os.ReadFile("./db/schema/postgresql/cr_migration.sql")
 	if err != nil {
 		return err
 	}
 
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	if _, sqlErr := tx.Exec(string(migrationBuf)); sqlErr != nil {
 		return sqlErr
 	}
 
@@ -142,8 +128,6 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*models.MigrationGroup
 	}
 	defer tx.Rollback()
 
-	txQuery := repo.queries.WithTx(tx)
-	
 	for i := 0; i < len(migrations); i++ {
 		fmt.Printf("executing group %s:\n", migrations[i].Name)
 
@@ -151,7 +135,7 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*models.MigrationGroup
 			return fmt.Errorf("failed to execute group '%s', %v", migrations[i].Name, err)
 		}
 
-		if err := logMigration(txQuery, migrations[i]); err != nil {
+		if err := logMigration(tx, migrations[i]); err != nil {
 			return fmt.Errorf("failed to log group '%s', %v", migrations[i].Name, err)
 		}
 
@@ -179,27 +163,35 @@ func applyMigration(tx *sql.Tx, migration *models.MigrationGroup) error {
 	return nil
 }
 
-func logMigration(tx *queries.Queries, group *models.MigrationGroup) error {
-	result, err := tx.LogMigrationGroup(context.TODO(), group.Name)
+func logMigration(tx *sql.Tx, group *models.MigrationGroup) error {
+	// logs are executed manualy because pgx doesn't support returning LastInsertId when
+	// executing a query, so QueryRow is used instead.
+	// sqlc is prob overkill for this project anyways :)
+
+	migrationGroupCmd := `INSERT INTO migration_group (
+		name
+	) VALUES (
+		$1
+	)
+	RETURNING id;`
+
+	var groupId uint
+
+	err := tx.QueryRow(migrationGroupCmd, group.Name).Scan(&groupId)
 	if err != nil {
 		return err
 	}
+	group.Id = groupId
 
-	if groupId, err := result.LastInsertId(); err != nil {
-		return err
-	} else {
-		group.Id = uint(groupId)
-	}
+	migrationCmd := `INSERT INTO migration (
+		migration_group_id,
+		name,
+		executed_at
+	) VALUES ($1, $2, $3);`
 
 	logTime := time.Now()
 	for _, mig := range group.Migrations {
-		migrationParams := queries.LogMigrationParams{
-			MigrationGroupID: int32(group.Id),
-			Name: mig.Name,
-			ExecutedAt: logTime,
-		}
-
-		if err := tx.LogMigration(context.TODO(), migrationParams); err != nil {
+		if _, err := tx.Exec(migrationCmd, groupId, mig.Name, logTime); err != nil {
 			return err
 		}
 	}

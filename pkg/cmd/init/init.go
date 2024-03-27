@@ -1,25 +1,21 @@
 package init
 
 import (
-	"encoding/json"
-	"os"
-
 	"github.com/marianop9/valkyrie-migrate/internal/constants"
+	"github.com/marianop9/valkyrie-migrate/internal/helpers"
 	"github.com/marianop9/valkyrie-migrate/pkg/valkyrie"
 	"github.com/spf13/cobra"
 )
 
-var connFlag = "conn"
-
 func NewInitCmd() *cobra.Command {
 	c := &cobra.Command{
-		Use:       "init config-file [--conn db-connection]",
+		Use:       "init <connFile> [--conn db-connection]",
 		Short:     "Creates or verifies the connectino to the database.",
 		Long:      "Creates or pings the specified database. The deafult database is used if no config file is specificed.",
 		Args:      cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			connString, err := cmd.Flags().GetString(connFlag)
+			connString, err := cmd.Flags().GetString(constants.ConnFlagName)
 			if err != nil  {
 				return err
 			} 
@@ -31,7 +27,7 @@ func NewInitCmd() *cobra.Command {
 			if len(args) > 0 {
 				connFilePath := args[0]
 
-				if connString, err = getConnString(connFilePath); err != nil {
+				if connString, err = helpers.GetConnString(connFilePath); err != nil {
 					return err
 				}
 			} else {
@@ -42,25 +38,7 @@ func NewInitCmd() *cobra.Command {
 		},
 	}
 
-	c.PersistentFlags().String(connFlag, "", "directly specifies a db connection, ignoring the config file")
+	c.PersistentFlags().String(constants.ConnFlagName, "", "directly specifies a db connection, ignoring the config file")
 
 	return c
-}
-
-type ConnFile struct {
-	ConnectionString string
-}
-
-func getConnString(connFilePath string) (string, error) {
-	buf, err := os.ReadFile(connFilePath)
-
-	connFile := ConnFile{}
-
-	if err != nil {
-		return "", err
-	}
-
-	err = json.Unmarshal(buf, &connFile)
-
-	return connFile.ConnectionString, err
 }
