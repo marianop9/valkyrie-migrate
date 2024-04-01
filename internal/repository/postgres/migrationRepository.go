@@ -167,24 +167,25 @@ func applyMigration(tx *sql.Tx, migration *models.MigrationGroup) error {
 }
 
 func logMigration(tx *sql.Tx, group *models.MigrationGroup) error {
-	// logs are executed manualy because pgx doesn't support returning LastInsertId when
-	// executing a query, so QueryRow is used instead.
-	// sqlc is prob overkill for this project anyways :)
+	if group.Id == 0 {
+		// logs are executed manualy because pgx doesn't support returning LastInsertId when
+		// executing a query, so QueryRow is used instead.
+		// sqlc is prob overkill for this project anyways :)
+		migrationGroupCmd := `INSERT INTO migration_group (
+			name
+		) VALUES (
+			$1
+		)
+		RETURNING id;`
 
-	migrationGroupCmd := `INSERT INTO migration_group (
-		name
-	) VALUES (
-		$1
-	)
-	RETURNING id;`
+		var groupId uint
 
-	var groupId uint
-
-	err := tx.QueryRow(migrationGroupCmd, group.Name).Scan(&groupId)
-	if err != nil {
-		return err
+		err := tx.QueryRow(migrationGroupCmd, group.Name).Scan(&groupId)
+		if err != nil {
+			return err
+		}
+		group.Id = groupId
 	}
-	group.Id = groupId
 
 	migrationCmd := `INSERT INTO migration (
 		migration_group_id,

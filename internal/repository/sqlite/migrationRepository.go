@@ -103,14 +103,17 @@ func applyMigration(tx *sql.Tx, migration *models.MigrationGroup) error {
 }
 
 func logMigration(tx *queries.Queries, group *models.MigrationGroup) error {
-	result, err := tx.LogMigrationGroup(context.TODO(), group.Name)
-	if err != nil {
-		return err
-	}
 
-	if groupId, err := result.LastInsertId(); err != nil {
-		return err
-	} else {
+	if group.Id == 0 {
+		result, err := tx.LogMigrationGroup(context.TODO(), group.Name)
+		if err != nil {
+			return err
+		}
+	
+		groupId, err := result.LastInsertId()
+		if err != nil {
+			return err
+		} 
 		group.Id = uint(groupId)
 	}
 

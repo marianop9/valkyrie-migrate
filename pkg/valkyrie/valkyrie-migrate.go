@@ -15,7 +15,7 @@ import (
 )
 
 type MigrateApp struct {
-//	repo *sqliteRepo.SqliteRepo
+	//	repo *sqliteRepo.SqliteRepo
 	repo models.MigrationStorer
 }
 
@@ -86,7 +86,9 @@ func (app MigrateApp) Run(migrationFolder string) error {
 				}
 			}
 
+			// re-creates the group only with the migrations it's missing
 			groupToApply := &models.MigrationGroup{
+				Id:             existingMigFolder.Id,
 				Name:           migrationFolder.Name,
 				Migrations:     migrationsToApply,
 				MigrationCount: len(migrationsToApply),
