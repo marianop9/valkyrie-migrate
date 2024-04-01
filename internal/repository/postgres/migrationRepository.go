@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/marianop9/valkyrie-migrate/internal/models"
@@ -68,24 +67,28 @@ func (repo *MigrationRepo) EnsureCreated() error {
 func createMigrationTables(tx *sql.Tx) error {
 	fmt.Println("creating table 'migration_group'...")
 
-	migGroupBuf, err := os.ReadFile("./db/schema/postgresql/cr_migrationGroup.sql")
-	if err != nil {
-		return err
-	}
+	cmd1 := `CREATE TABLE "migration_group" (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL
+	);`
 
-	if _, sqlErr := tx.Exec(string(migGroupBuf)); sqlErr != nil {
-		return sqlErr
+	if _, err := tx.Exec(cmd1); err != nil {
+		return err
 	}
 
 	fmt.Println(`creating table 'migration'...`)
 
-	migrationBuf, err := os.ReadFile("./db/schema/postgresql/cr_migration.sql")
-	if err != nil {
-		return err
-	}
+	cmd2 := `CREATE TABLE migration (
+		id SERIAL,
+		migration_group_id INTEGER NOT NULL,
+		name VARCHAR(255) NOT NULL,
+		executed_at TIMESTAMP NOT NULL,
+		PRIMARY KEY (id),
+		CONSTRAINT fk_migration FOREIGN KEY (migration_group_id) REFERENCES "migration_group" (id)
+	);`
 
-	if _, sqlErr := tx.Exec(string(migrationBuf)); sqlErr != nil {
-		return sqlErr
+	if _, err := tx.Exec(cmd2); err != nil {
+		return err
 	}
 
 	return nil

@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"os"
 )
 
 func EnsureCreated(db *sql.DB) error {
@@ -27,12 +26,12 @@ func EnsureCreated(db *sql.DB) error {
 	foundTables := make([]string, 0)
 	for rows.Next() {
 		var name string
-        if err := rows.Scan(&name); err != nil {
-            return err
-        }
-        
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+
 		foundTables = append(foundTables, name)
-    }
+	}
 
 	if len(foundTables) == len(migrationTables) {
 		fmt.Println("migrations tables exist")
@@ -69,29 +68,40 @@ func sliceContains(slice []string, s string) bool {
 func createMigrationGroupTable(db *sql.DB) error {
 	fmt.Println("creating table 'migration_group'...")
 
-	buf,err := os.ReadFile("./db/schema/sqlite/cr_migrationGroup.sql")
-	if err != nil {
-		return err
-	}
+	// buf, err := os.ReadFile("./db/schema/sqlite/cr_migrationGroup.sql")
+	// if err != nil {
+	// 	return err
+	// }
+	cmd := `CREATE TABLE migration_group (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name VARCHAR(255) NOT NULL
+	);`
 
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
 		return sqlErr
 	}
-	
+
 	return nil
 }
 
 func createMigrationTable(db *sql.DB) error {
 	fmt.Println(`creating table 'migration'...`)
 
-	buf,err := os.ReadFile("./db/schema/sqlite/cr_migration.sql")
-	if err != nil {
-		return err
-	}
-	
-	if _, sqlErr := db.Exec(string(buf)); sqlErr != nil {
+	// buf, err := os.ReadFile("./db/schema/sqlite/cr_migration.sql")
+	// if err != nil {
+	// 	return err
+	// }
+	cmd := `CREATE TABLE migration (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		migration_group_id INTEGER NOT NULL,
+		name VARCHAR(255) NOT NULL,
+		executed_at TIMESTAMP NOT NULL
+	);`
+
+
+	if _, sqlErr := db.Exec(cmd); sqlErr != nil {
 		return sqlErr
 	}
-	
+
 	return nil
 }
