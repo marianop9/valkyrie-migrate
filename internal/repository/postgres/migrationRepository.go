@@ -102,8 +102,8 @@ func (repo *MigrationRepo) GetMigrations() ([]models.MigrationGroup, error) {
 
 	migrationGroups := migGroupFromQueryList(queryRows)
 
-	for i := 0; i < len(migrationGroups); i++ {
-		group := migrationGroups[i]
+	for i := range migrationGroups {
+		group := &migrationGroups[i]
 
 		migs, err := repo.getMigrationsByGroup(group.Id)
 		if err != nil {
@@ -142,7 +142,7 @@ func (repo *MigrationRepo) ExecuteMigrations(migrations []*models.MigrationGroup
 			return fmt.Errorf("failed to log group '%s', %v", migrations[i].Name, err)
 		}
 
-		fmt.Printf("done executing group %s:\n", migrations[i].Name)
+		fmt.Printf("done executing group %s\n", migrations[i].Name)
 	}
 
 	return tx.Commit()

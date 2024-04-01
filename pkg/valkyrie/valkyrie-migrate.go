@@ -78,10 +78,10 @@ func (app MigrateApp) Run(migrationFolder string) error {
 			migrationGroupsToApply = append(migrationGroupsToApply, migrationFolder)
 		} else if existingMigFolder.MigrationCount != migrationFolder.MigrationCount {
 			// migration group has new migrations to apply
-			migrationsToApply := make([]models.Migration, 0)
+			migrationsToApply := make([]models.Migration, 0, 1)
 
 			for _, migrationFile := range migrationFolder.Migrations {
-				if existingMigFile := helpers.FindMigration(existingMigFolder.Migrations, migrationFile.Name); existingMigFile != nil {
+				if existingMigFile := helpers.FindMigration(existingMigFolder.Migrations, migrationFile.Name); existingMigFile == nil {
 					migrationsToApply = append(migrationsToApply, migrationFile)
 				}
 			}
