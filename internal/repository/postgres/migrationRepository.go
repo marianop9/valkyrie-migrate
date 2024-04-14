@@ -195,7 +195,7 @@ func logMigration(tx *sql.Tx, group *models.MigrationGroup) error {
 
 	logTime := time.Now()
 	for _, mig := range group.Migrations {
-		if _, err := tx.Exec(migrationCmd, groupId, mig.Name, logTime); err != nil {
+		if _, err := tx.Exec(migrationCmd, group.Id, mig.Name, logTime); err != nil {
 			return err
 		}
 	}
